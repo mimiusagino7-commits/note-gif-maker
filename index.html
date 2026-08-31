@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f6f2e8" />
+  <title>noteリアクションGIFメーカー</title>
+  <meta name="description" content="連続画像に文字を重ねて、ブラウザだけでリアクションGIFを作れる小さな道具です。" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <style>
+    :root{
+      --bg:#f6f2e8;
+      --paper:#fffdf8;
+      --ink:#3f493f;
+      --muted:#7b8179;
+      --line:#dcd8ca;
+      --sage:#dfe8d8;
+      --sage-strong:#75906d;
+      --turq:#4c9b96;
+      --brown:#9c7e62;
+      --shadow:0 12px 30px rgba(75,66,48,.08);
+      --radius:22px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at 10% 0%, rgba(223,232,216,.9), transparent 30%),
+        radial-gradient(circle at 100% 20%, rgba(76,155,150,.10), transparent 28%),
+        var(--bg);
+      min-height:100vh;
+    }
+    .wrap{width:min(1080px,92vw);margin:0 auto;padding:38px 0 64px}
+    header{text-align:center;margin-bottom:26px}
+    .eyebrow{font-size:.84rem;letter-spacing:.16em;color:var(--sage-strong);font-weight:700;margin-bottom:8px}
+    h1{font-size:clamp(1.75rem,4vw,3rem);margin:.1em 0 .3em;line-height:1.22;font-weight:800}
+    header p{margin:.5em auto 0;max-width:690px;color:var(--muted);line-height:1.9}
+    .badge{display:inline-flex;align-items:center;gap:.45rem;margin-top:14px;padding:7px 12px;background:rgba(255,255,255,.7);border:1px solid var(--line);border-radius:999px;font-size:.82rem;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+    .card{background:rgba(255,253,248,.94);border:1px solid rgba(220,216,202,.9);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+    .card h2{font-size:1.08rem;margin:0 0 14px;display:flex;align-items:center;gap:.5rem}
+    .step{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--sage);color:#53634e;font-size:.82rem}
+    .drop{border:2px dashed #c9cdbf;border-radius:18px;padding:24px;text-align:center;background:#fbfaf5;transition:.2s;cursor:pointer}
+    .drop.drag{border-color:var(--turq);background:#f1f9f7}
+    .drop strong{display:block;font-size:1rem;margin-bottom:5px}
+    .drop small{color:var(--muted);line-height:1.6}
+    input[type=file]{display:none}
+    .frames{display:grid;gap:8px;margin-top:12px;max-height:265px;overflow:auto;padding-right:3px}
+    .frame{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:10px;padding:8px;border:1px solid var(--line);border-radius:13px;background:#fff}
+    .thumb{width:52px;height:52px;border-radius:10px;object-fit:cover;background:#eee}
+    .fname{min-width:0;font-size:.84rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .rowbtns{display:flex;gap:4px}
+    button,.btn{border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;font:inherit;transition:.15s;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:.35rem}
+    button:hover,.btn:hover{transform:translateY(-1px)}
+    .mini{padding:7px 9px;background:#f3f1ea;color:#596057}
+    .mini.danger{color:#965b54}
+    .field{margin:14px 0}
+    label{display:block;font-size:.87rem;font-weight:700;margin-bottom:7px}
+    input[type=text],select,input[type=number]{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 13px;background:#fff;color:var(--ink);font:inherit;outline:none}
+    input:focus,select:focus{border-color:var(--turq);box-shadow:0 0 0 3px rgba(76,155,150,.1)}
+    .preset{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+    .chip{border:1px solid var(--line);background:#fff;padding:7px 10px;border-radius:999px;font-size:.78rem;color:#5d665d}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .range-line{display:grid;grid-template-columns:1fr 70px;gap:10px;align-items:center}
+    input[type=range]{width:100%;accent-color:var(--turq)}
+    .preview{aspect-ratio:1/1;border-radius:18px;background:linear-gradient(135deg,#ece9df,#f8f6ef);display:grid;place-items:center;overflow:hidden;border:1px solid var(--line);position:relative}
+    canvas{max-width:100%;max-height:100%;display:block}
+    .empty{text-align:center;color:#93988f;padding:30px;line-height:1.7;font-size:.9rem}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+    .primary{background:var(--turq);color:#fff;flex:1;min-width:180px}
+    .secondary{background:var(--sage);color:#53634e}
+    .ghost{background:#f4f1e9;color:#666c64}
+    .status{min-height:24px;margin-top:10px;color:var(--muted);font-size:.85rem;line-height:1.6}
+    .output{margin-top:16px;display:none}
+    .output img{width:100%;border-radius:16px;border:1px solid var(--line);background:#fff}
+    .download{width:100%;margin-top:10px;background:#5c7657;color:#fff}
+    .note{font-size:.8rem;color:var(--muted);line-height:1.7;margin-top:12px;padding:11px 12px;background:#f7f5ef;border-radius:12px}
+    footer{text-align:center;color:#8b9088;font-size:.78rem;margin-top:28px;line-height:1.8}
+    @media(max-width:800px){.grid{grid-template-columns:1fr}.wrap{padding-top:26px}.two{grid-template-columns:1fr 1fr}}
+    @media(max-width:470px){.two{grid-template-columns:1fr}.card{padding:16px}.actions{flex-direction:column}.primary{width:100%}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <div class="eyebrow">NON.'S LITTLE TOOLBOX</div>
+      <h1>🎞️ noteリアクションGIFメーカー</h1>
+      <p>連続画像を入れて、文字と速さを決めるだけ。<br>「スキ♡ありがとう」などのリアクションGIFを、ブラウザの中だけで作ります。</p>
+      <div class="badge">🔒 画像はサーバーへ送信しません</div>
+    </header>
+
+    <section class="grid">
+      <div>
+        <div class="card">
+          <h2><span class="step">1</span> 画像を入れる</h2>
+          <label class="drop" id="dropZone" for="fileInput">
+            <strong>画像をまとめて選ぶ</strong>
+            <small>PNG / JPG / WEBP<br>ドラッグ＆ドロップもOK（最大12枚）</small>
+          </label>
+          <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+          <div class="frames" id="frames"></div>
+        </div>
+
+        <div class="card" style="margin-top:20px">
+          <h2><span class="step">2</span> 文字と動きを決める</h2>
+
+          <div class="field">
+            <label for="textInput">表示する文字</label>
+            <input id="textInput" type="text" value="スキ♡ありがとう" maxlength="30">
+            <div class="preset">
+              <button class="chip" type="button" data-text="スキ♡ありがとう">スキ♡ありがとう</button>
+              <button class="chip" type="button" data-text="フォローありがとう">フォローありがとう</button>
+              <button class="chip" type="button" data-text="コメントありがとう">コメントありがとう</button>
+              <button class="chip" type="button" data-text="ありがとう♡">ありがとう♡</button>
+            </div>
+          </div>
+
+          <div class="two">
+            <div class="field">
+              <label for="position">文字の位置</label>
+              <select id="position">
+                <option value="top">上</option>
+                <option value="center">中央</option>
+                <option value="bottom" selected>下</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="size">仕上がりサイズ</label>
+              <select id="size">
+                <option value="480">480px</option>
+                <option value="600" selected>600px</option>
+                <option value="800">800px</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>文字サイズ</label>
+            <div class="range-line">
+              <input id="fontSize" type="range" min="20" max="80" value="46">
+              <input id="fontSizeNumber" type="number" min="20" max="80" value="46">
+            </div>
+          </div>
+
+          <div class="field">
+            <label>1枚の表示時間</label>
+            <div class="range-line">
+              <input id="delay" type="range" min="100" max="1200" step="50" value="300">
+              <input id="delayNumber" type="number" min="100" max="1200" step="50" value="300">
+            </div>
+            <div class="note">300ms = 0.3秒。数字を小さくすると動きが速くなります。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="step">3</span> プレビューしてGIFにする</h2>
+        <div class="preview" id="previewBox">
+          <canvas id="previewCanvas" width="600" height="600"></canvas>
+          <div class="empty" id="emptyState">画像を入れると<br>ここにプレビューが出ます 🌿</div>
+        </div>
+
+        <div class="actions">
+          <button class="secondary" id="playBtn" type="button">▶ プレビュー</button>
+          <button class="primary" id="makeBtn" type="button">✨ GIFを作る</button>
+        </div>
+        <div class="status" id="status"></div>
+
+        <div class="output" id="output">
+          <img id="gifResult" alt="作成したGIF">
+          <a class="btn download" id="downloadBtn" download="note-reaction.gif">GIFを保存する</a>
+        </div>
+
+        <div class="note">
+          💡 まずは5〜8枚くらいがおすすめ。枚数や画像サイズが大きいほど、GIF作成に少し時間がかかります。
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      ことばの庭の小さな道具箱 🌿<br>
+      ブラウザ内で処理するため、選んだ画像は外部サーバーへ保存されません。
+    </footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/gifshot@0.4.5/build/gifshot.min.js"></script>
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const fileInput = $('#fileInput');
+    const dropZone = $('#dropZone');
+    const framesEl = $('#frames');
+    const canvas = $('#previewCanvas');
+    const ctx = canvas.getContext('2d');
+    const emptyState = $('#emptyState');
+    const statusEl = $('#status');
+    const outputEl = $('#output');
+    const gifResult = $('#gifResult');
+    const downloadBtn = $('#downloadBtn');
+    const playBtn = $('#playBtn');
+    const makeBtn = $('#makeBtn');
+
+    let frames = [];
+    let timer = null;
+    let previewIndex = 0;
+
+    function syncRange(rangeId, numberId){
+      const range = $(rangeId), num = $(numberId);
+      range.addEventListener('input',()=>{num.value=range.value; redraw(); restartPreviewIfPlaying();});
+      num.addEventListener('input',()=>{
+        const min=+range.min,max=+range.max;
+        num.value=Math.max(min,Math.min(max,+num.value||min));
+        range.value=num.value; redraw(); restartPreviewIfPlaying();
+      });
+    }
+    syncRange('#fontSize','#fontSizeNumber');
+    syncRange('#delay','#delayNumber');
+
+    ['#textInput','#position','#size'].forEach(id => $(id).addEventListener('input',()=>{ redraw(); }));
+    document.querySelectorAll('.chip').forEach(btn => btn.addEventListener('click',()=>{
+      $('#textInput').value=btn.dataset.text; redraw();
+    }));
+
+    ['dragenter','dragover'].forEach(evt => dropZone.addEventListener(evt,e=>{e.preventDefault();dropZone.classList.add('drag')}));
+    ['dragleave','drop'].forEach(evt => dropZone.addEventListener(evt,e=>{e.preventDefault();dropZone.classList.remove('drag')}));
+    dropZone.addEventListener('drop',e=>addFiles([...e.dataTransfer.files]));
+    fileInput.addEventListener('change',e=>{addFiles([...e.target.files]); fileInput.value='';});
+
+    async function addFiles(files){
+      const valid = files.filter(f=>/^image\/(png|jpeg|webp)$/.test(f.type));
+      const room = Math.max(0,12-frames.length);
+      if(!room){statusEl.textContent='最大12枚までです。';return;}
+      for(const file of valid.slice(0,room)){
+        const url = URL.createObjectURL(file);
+        try{
+          const img = await loadImage(url);
+          frames.push({file,url,img});
+        }catch(e){URL.revokeObjectURL(url)}
+      }
+      renderFrames();
+      previewIndex=0;
+      redraw();
+      statusEl.textContent = frames.length ? `${frames.length}枚読み込みました。順番も変更できます。` : '';
+    }
+
+    function loadImage(src){
+      return new Promise((resolve,reject)=>{
+        const img=new Image(); img.onload=()=>resolve(img); img.onerror=reject; img.src=src;
+      });
+    }
+
+    function renderFrames(){
+      framesEl.innerHTML='';
+      frames.forEach((f,i)=>{
+        const row=document.createElement('div'); row.className='frame';
+        row.innerHTML=`
+          <img class="thumb" src="${f.url}" alt="">
+          <div class="fname">${i+1}. ${escapeHtml(f.file.name)}</div>
+          <div class="rowbtns">
+            <button class="mini" type="button" title="上へ" data-act="up" data-i="${i}">↑</button>
+            <button class="mini" type="button" title="下へ" data-act="down" data-i="${i}">↓</button>
+            <button class="mini danger" type="button" title="削除" data-act="del" data-i="${i}">×</button>
+          </div>`;
+        framesEl.appendChild(row);
+      });
+      framesEl.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
+        const i=+btn.dataset.i, act=btn.dataset.act;
+        if(act==='up'&&i>0)[frames[i-1],frames[i]]=[frames[i],frames[i-1]];
+        if(act==='down'&&i<frames.length-1)[frames[i+1],frames[i]]=[frames[i],frames[i+1]];
+        if(act==='del'){URL.revokeObjectURL(frames[i].url);frames.splice(i,1)}
+        previewIndex=Math.min(previewIndex,Math.max(0,frames.length-1)); renderFrames(); redraw();
+      }));
+    }
+
+    function escapeHtml(str){return str.replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+
+    function outputDims(img){
+      const max=+$('#size').value;
+      const ratio=img.width/img.height;
+      if(ratio>=1) return {w:max,h:Math.round(max/ratio)};
+      return {w:Math.round(max*ratio),h:max};
+    }
+
+    function drawFrame(img,target=canvas){
+      const c=target, cctx=c.getContext('2d');
+      const {w,h}=outputDims(img);
+      c.width=w; c.height=h;
+      cctx.clearRect(0,0,w,h);
+      cctx.drawImage(img,0,0,w,h);
+
+      const text=$('#textInput').value.trim();
+      if(text){
+        const base=+$('#fontSize').value;
+        const fontPx=Math.max(14,Math.round(base*(w/600)));
+        cctx.save();
+        cctx.font=`800 ${fontPx}px -apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif`;
+        cctx.textAlign='center'; cctx.textBaseline='middle'; cctx.lineJoin='round';
+        const pos=$('#position').value;
+        let y = pos==='top' ? fontPx*.95 : pos==='center' ? h/2 : h-fontPx*.95;
+        const maxWidth=w*.9;
+        let drawText=text;
+        while(cctx.measureText(drawText).width>maxWidth && drawText.length>1){
+          cctx.font=`800 ${Math.max(12,parseInt(cctx.font)*.94)}px -apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif`;
+        }
+        cctx.strokeStyle='#18334a'; cctx.lineWidth=Math.max(3,fontPx*.13); cctx.strokeText(drawText,w/2,y,maxWidth);
+        cctx.fillStyle='#ffd84d'; cctx.fillText(drawText,w/2,y,maxWidth);
+        cctx.restore();
+      }
+    }
+
+    function redraw(){
+      if(!frames.length){
+        ctx.clearRect(0,0,canvas.width,canvas.height); emptyState.style.display='block'; return;
+      }
+      emptyState.style.display='none';
+      drawFrame(frames[previewIndex%frames.length].img,canvas);
+    }
+
+    function restartPreviewIfPlaying(){ if(timer){ stopPreview(); startPreview(); } }
+    function startPreview(){
+      if(!frames.length){statusEl.textContent='先に画像を入れてください。';return;}
+      stopPreview();
+      playBtn.textContent='■ 停止';
+      timer=setInterval(()=>{previewIndex=(previewIndex+1)%frames.length;redraw()}, +$('#delay').value);
+    }
+    function stopPreview(){ if(timer){clearInterval(timer);timer=null;} playBtn.textContent='▶ プレビュー'; }
+    playBtn.addEventListener('click',()=>timer?stopPreview():startPreview());
+
+    makeBtn.addEventListener('click',async()=>{
+      if(frames.length<2){statusEl.textContent='GIFには2枚以上の画像を入れてください。';return;}
+      if(typeof gifshot==='undefined'){statusEl.textContent='GIF作成ライブラリを読み込めませんでした。通信環境を確認してください。';return;}
+      stopPreview();
+      makeBtn.disabled=true; makeBtn.textContent='GIF作成中…'; outputEl.style.display='none';
+      statusEl.textContent='フレームを準備しています…';
+      await new Promise(r=>setTimeout(r,30));
+
+      const rendered=[];
+      for(let i=0;i<frames.length;i++){
+        const c=document.createElement('canvas');
+        drawFrame(frames[i].img,c);
+        rendered.push(c.toDataURL('image/png'));
+      }
+      const first=frames[0].img, d=outputDims(first);
+      statusEl.textContent='GIFを書き出しています…';
+
+      gifshot.createGIF({
+        images:rendered,
+        gifWidth:d.w,
+        gifHeight:d.h,
+        interval:+$('#delay').value/1000,
+        numFrames:rendered.length,
+        frameDuration:1,
+        sampleInterval:10,
+        numWorkers:2
+      }, obj=>{
+        makeBtn.disabled=false; makeBtn.textContent='✨ GIFを作る';
+        if(!obj.error){
+          gifResult.src=obj.image;
+          downloadBtn.href=obj.image;
+          outputEl.style.display='block';
+          statusEl.textContent='できました〜！🎉 下のGIFを確認して保存してください。';
+        }else{
+          statusEl.textContent='GIF作成に失敗しました。画像枚数やサイズを少し小さくして、もう一度試してください。';
+          console.error(obj.errorCode,obj.errorMsg);
+        }
+      });
+    });
+
+    redraw();
+  </script>
+</body>
+</html>
